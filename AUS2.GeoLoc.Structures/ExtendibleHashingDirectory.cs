@@ -6,7 +6,7 @@ using System.Text;
 
 namespace AUS2.GeoLoc.Structures
 {
-    public class ExtendibleHashingDirectory<T> where T : IData<T>
+    public class ExtendibleHashingDirectory<T> : IDisposable where T : IData<T> 
     {
         public int BFactor { get; private set; }
         public string FilePath { get; set; }
@@ -18,6 +18,7 @@ namespace AUS2.GeoLoc.Structures
 
         public ExtendibleHashingDirectory(string filePath, int bFactor)
         {
+            _directory = new Dictionary<int, int>();
             FilePath = filePath;
             BFactor = bFactor; //TODO?? ak bude čas tak dorobyť automaticke vypočitanie na zaklade velkosti clustera a T
             fileStream = new FileStream(FilePath, FileMode.OpenOrCreate);
@@ -53,8 +54,13 @@ namespace AUS2.GeoLoc.Structures
             block.AddRecord(data);
 
             var blockIndex = BiteArrayToInt32(data.GetHash());
-            _directory.Add(blockIndex, _lastAddress + block.GetSize());
+            var blockAddress = _lastAddress + block.GetSize();
+            _directory.Add(blockIndex, blockAddress);
 
+            fileStream.Seek(blockAddress, SeekOrigin.Begin);
+            fileStream.Write(block.ToByteArray());
+
+            _lastAddress = blockAddress;
             return true;
         }
 
@@ -69,6 +75,11 @@ namespace AUS2.GeoLoc.Structures
             var bytes = new byte[(bits.Length - 1) / 8 + 1];
             bits.CopyTo(bytes, 0);
             return BitConverter.ToInt32(bytes);
+        }
+
+        public void Dispose()
+        {
+            fileStream.Close();
         }
     }
 }

@@ -10,12 +10,23 @@ namespace AUS2.GeoLoc.Tester
     {
         static void Main(string[] args)
         {
+            var directory = new ExtendibleHashingDirectory<Property>("file.dat", 1);
+            directory.Add(new Property { Id = 9, Description = "Hoho", RegisterNumber = 9 });
+            directory.Add(new Property { Id = 69, Description = "Hoho", RegisterNumber = 9 });
+            directory.Add(new Property { Id = 6, Description = "Hoho", RegisterNumber = 9 });
+            var pFind = new Property { Id = 69 };
+            Console.WriteLine(directory.Find(pFind));
+            //BitsConversionTest();
+            //RunManualTest();
+        }
+
+        private static void BitsConversionTest()
+        {
             var num = 2812;
             var arr = new BitArray(BitConverter.GetBytes(num));
             var ret = new byte[(arr.Length - 1) / 8 + 1];
             arr.CopyTo(ret, 0);
             Console.WriteLine(BitConverter.ToInt32(ret));
-            //RunManualTest();
         }
 
         private static void RunManualTest()
