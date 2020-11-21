@@ -14,69 +14,77 @@ namespace AUS2.GeoLoc.Tester
         public double Longitude { get; set; }
         public char LongitudeSymbol { get; set; }
     }
+
     public class Property : IData<Property>
     {
-        public Guid Id { get; set; }
-        public int RegisterNumber { get; set; }
-        public string Description{ get; set; }
-        public const int Max_Description_Length = 20;
+        public const int MaxDescriptionLength = 20;
+        //TODO Add 2x Gps 
+        public int Id { get; set; } = int.MinValue;
+        public int RegisterNumber { get; set; } = int.MinValue;
+        public string Description{ get; set; } = string.Empty;
 
-        public Property()
-        {
-            Id = Guid.Empty;
-            RegisterNumber = -1;
-            Description = "";
-        }
+        public Property() {}
 
         public byte[] ToByteArray()
         {
-            var result = new List<byte>();
-            result.AddRange(Id.ToByteArray());
-            result.AddRange(BitConverter.GetBytes(RegisterNumber));
-            result.AddRange(BitConverter.GetBytes(Description.Length));
-            for (int i = 0; i < Max_Description_Length; i++) {
-                result.AddRange(
-                    BitConverter.GetBytes(
-                            i < Description.Length ? Description[i] : 'x'
-                                          )
-                                );
+            byte[] result;
+            using (var ms = new MemoryStream()) {
+                ms.Write(BitConverter.GetBytes(Id));
+                ms.Write(BitConverter.GetBytes(RegisterNumber));
+                ms.Write(BitConverter.GetBytes(Description.Length));
+                ms.Write(Encoding.UTF8.GetBytes(Description));
+                for (int i = 0; i < MaxDescriptionLength - Description.Length; i++) {
+                    ms.WriteByte(BitConverter.GetBytes('x')[0]);
+                }
+                result = ms.ToArray();
             }
-
-            return result.ToArray();
+            return result;
         }
 
         public void FromByteArray(byte[] array)
         {
-            var offset = 0;
-            Id = new Guid(array.AsSpan(0, 16));
-            offset += 16;
-            RegisterNumber = BitConverter.ToInt32(array, offset);
-            offset += sizeof(int);
-            for (int i = 0; i < Max_Description_Length; i++) {
-                
+            using (var ms = new MemoryStream(array)) {
+                var buffer = new byte[sizeof(int)];
+                ms.Read(buffer);
+                Id = BitConverter.ToInt32(buffer);
+
+                ms.Read(buffer);
+                RegisterNumber = BitConverter.ToInt32(buffer);
+
+                ms.Read(buffer);
+                var descLength = BitConverter.ToInt32(buffer);
+
+                buffer = new byte[MaxDescriptionLength];
+                ms.Read(buffer);
+                Description = Encoding.UTF8.GetString(buffer).Substring(0, descLength);
             }
-            throw new NotImplementedException();
         }
 
         public int GetSize()
         {
-            throw new NotImplementedException();
+            return sizeof(byte) * MaxDescriptionLength // Description full length
+                + sizeof(int) * 3; // Id, RegisterNumber, Real Description length
         }
 
 
         public BitArray GetHash()
         {
-            throw new NotImplementedException();
+            return new BitArray(BitConverter.GetBytes(Id));
         }
 
         public bool CustomEquals(Property data)
         {
-            throw new NotImplementedException();
+            return Id == data.Id;
         }
 
         public Property GetEmptyClass()
         {
-            throw new NotImplementedException();
+            return new Property();
+        }
+
+        public override string ToString()
+        {
+            return $"Id: {Id} /// RN: {RegisterNumber} /// Desc: {Description}";
         }
     }
 }

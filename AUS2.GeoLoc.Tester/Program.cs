@@ -1,4 +1,6 @@
-﻿using System;
+﻿using AUS2.GeoLoc.Structures;
+using System;
+using System.Collections;
 using System.IO;
 using System.Text;
 
@@ -8,55 +10,47 @@ namespace AUS2.GeoLoc.Tester
     {
         static void Main(string[] args)
         {
-            var id = Guid.NewGuid();
-            var number = 123;
-            var desc = "Desc...";
-            var max_desc = 20;
+            var num = 2812;
+            var arr = new BitArray(BitConverter.GetBytes(num));
+            var ret = new byte[(arr.Length - 1) / 8 + 1];
+            arr.CopyTo(ret, 0);
+            Console.WriteLine(BitConverter.ToInt32(ret));
+            //RunManualTest();
+        }
 
-            Console.WriteLine("---Data---");
-            Console.WriteLine(id);
-            Console.WriteLine(number);
-            Console.WriteLine(desc);
-            Console.WriteLine("----------\n");
+        private static void RunManualTest()
+        {
+            var p1 = new Property { Id = 69, Description = "Hoho", RegisterNumber = 9 };
+            Console.WriteLine(p1);
+            var tmp = p1.ToByteArray();
+            var p2 = new Property();
+            p2.FromByteArray(tmp);
+            Console.WriteLine("(De)serialisation...");
+            Console.WriteLine(p2);
+            Console.WriteLine(tmp.Length + " " + p1.GetSize());
+            Console.WriteLine("\n---------------------------------------\n");
 
-            using (var ms = new MemoryStream()) {
-                ms.Write(id.ToByteArray());
-                ms.Write(BitConverter.GetBytes(number));
-                ms.Write(BitConverter.GetBytes(desc.Length));
-                ms.Write(Encoding.UTF8.GetBytes(desc));
-                for (int i = 0; i < max_desc - desc.Length; i++) {
-                    ms.WriteByte(BitConverter.GetBytes('x')[0]);
-                }
 
-                Console.WriteLine(
-                "Capacity = {0}, Length = {1}, Position = {2}\n",
-                ms.Capacity.ToString(),
-                ms.Length.ToString(),
-                ms.Position.ToString());
 
-                
-                
-                Console.WriteLine("------Seek to 0------");
-                ms.Seek(0, SeekOrigin.Begin);
-
-                var buffer = new byte[16];
-                ms.Read(buffer, 0, buffer.Length);
-                Console.WriteLine(new Guid(buffer));
-
-                buffer = new byte[sizeof(int)];
-                ms.Read(buffer, 0, buffer.Length);
-                Console.WriteLine(BitConverter.ToInt32(buffer));
-
-                ms.Read(buffer, 0, buffer.Length);
-                var descLength = BitConverter.ToInt32(buffer);
-                Console.WriteLine(descLength);
-
-                buffer = new byte[max_desc];
-                ms.Read(buffer, 0, buffer.Length);
-                Console.WriteLine(Encoding.UTF8.GetString(buffer).Substring(0, descLength));
-
-                Console.WriteLine(string.Join(' ', ms.ToArray()));
+            var rnd = new Random();
+            Block<Property> block = new Block<Property>(3, p1.GetEmptyClass());
+            foreach (var record in block.Records) {
+                record.Id = Guid.NewGuid().GetHashCode();
+                record.RegisterNumber = rnd.Next();
+                record.Description = "Jojo";
+                Console.WriteLine(record);
             }
+            block._validCount = 3;
+
+            var tmp2 = block.ToByteArray();
+            var block2 = new Block<Property>(3, p1.GetEmptyClass());
+            block2.FromByteArray(tmp2);
+
+            Console.WriteLine("(De)serialisation...");
+            foreach (var record in block2.Records) {
+                Console.WriteLine(record);
+            }
+            Console.WriteLine($"{block.GetSize()} {tmp2.Length}");
         }
     }
 }
