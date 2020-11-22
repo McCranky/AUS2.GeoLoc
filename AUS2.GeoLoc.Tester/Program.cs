@@ -10,23 +10,56 @@ namespace AUS2.GeoLoc.Tester
     {
         static void Main(string[] args)
         {
-            var directory = new ExtendibleHashingDirectory<Property>("file.dat", 1);
-            directory.Add(new Property { Id = 9, Description = "Hoho", RegisterNumber = 9 });
-            directory.Add(new Property { Id = 69, Description = "Hoho", RegisterNumber = 9 });
-            directory.Add(new Property { Id = 6, Description = "Hoho", RegisterNumber = 9 });
-            var pFind = new Property { Id = 69 };
-            Console.WriteLine(directory.Find(pFind));
-            //BitsConversionTest();
-            //RunManualTest();
+            
+        }
+
+        private static void StructureTest()
+        {
+            var directory = new ExtendibleHashingDirectory<Property>("file.dat", 3);
+            var iterations = 1000;
+            for (int i = 0; i < iterations; i++) {
+                directory.Add(new Property { Id = i, Description = "Hoho", RegisterNumber = i });
+            }
+
+            var pFind = new Property();
+            for (int i = 0; i < iterations; i++) {
+                pFind.Id = i;
+                Console.WriteLine(directory.Find(pFind));
+            }
         }
 
         private static void BitsConversionTest()
         {
-            var num = 2812;
+            var tmp = new BitArray(new bool[] { true, false, false});
+            BitsOperations.ReverseBits(ref tmp);
+            var enu = tmp.GetEnumerator();
+            while (enu.MoveNext()) {
+                Console.WriteLine(enu.Current);
+            }
+
+
+            int a = 0;
+            byte b = 16;
+            a += b * 3;
+            Console.WriteLine(a);
+            var num = 3;
             var arr = new BitArray(BitConverter.GetBytes(num));
+            //var arr = new BitArray(new bool[] { true, true});
             var ret = new byte[(arr.Length - 1) / 8 + 1];
             arr.CopyTo(ret, 0);
-            Console.WriteLine(BitConverter.ToInt32(ret));
+
+            arr.LeftShift(arr.Length - 2);
+            var en = arr.GetEnumerator();
+            while (en.MoveNext()) {
+                Console.WriteLine(en.Current);
+            }
+            Console.WriteLine(string.Join("", arr));
+            Console.WriteLine(BitsOperations.GetIntFromBitArray(arr));
+
+            Console.WriteLine(
+                BitsOperations.GetIntFromBitArray(
+                    BitsOperations.GetFirstBits(new BitArray(new bool[] { true, true, true }), 3)
+                    ));
         }
 
         private static void RunManualTest()
@@ -51,7 +84,7 @@ namespace AUS2.GeoLoc.Tester
                 record.Description = "Jojo";
                 Console.WriteLine(record);
             }
-            block._validCount = 3;
+            block.ValidCount = 3;
 
             var tmp2 = block.ToByteArray();
             var block2 = new Block<Property>(3, p1.GetEmptyClass());

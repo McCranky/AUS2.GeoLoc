@@ -11,8 +11,8 @@ namespace AUS2.GeoLoc.Structures
         private readonly int _BFactor;
         private readonly T _Class;
         private readonly List<T> _Records;
-        public int _validCount = 0;
-        private int _hashDepth = 1;
+        public int ValidCount { get; set; } = 0;
+        public int BlockDepth { get; set; } = 1;
 
         public Block(int bFactor, T t)
         {
@@ -28,8 +28,8 @@ namespace AUS2.GeoLoc.Structures
 
         public bool AddRecord(T record)
         {
-            if (_validCount == _Records.Count) return false; // There is no space for another record
-            _Records[_validCount++] = record;
+            if (ValidCount == _Records.Count) return false; // There is no space for another record
+            _Records[ValidCount++] = record;
             return true;
         }
 
@@ -37,7 +37,8 @@ namespace AUS2.GeoLoc.Structures
         {
             byte[] result;
             using (var ms = new MemoryStream()) {
-                ms.Write(BitConverter.GetBytes(_validCount));
+                ms.Write(BitConverter.GetBytes(ValidCount));
+                ms.Write(BitConverter.GetBytes(BlockDepth));
 
                 foreach (var record in _Records) {
                     ms.Write(record.ToByteArray());
@@ -53,10 +54,13 @@ namespace AUS2.GeoLoc.Structures
             using (var ms = new MemoryStream(array)) {
                 var buffer = new byte[sizeof(int)];
                 ms.Read(buffer);
-                _validCount = BitConverter.ToInt32(buffer);
+                ValidCount = BitConverter.ToInt32(buffer);
+                
+                ms.Read(buffer);
+                BlockDepth = BitConverter.ToInt32(buffer);
 
                 buffer = new byte[_Class.GetSize()];
-                for (int i = 0; i < _validCount; i++) {
+                for (int i = 0; i < ValidCount; i++) {
                     ms.Read(buffer);
                     _Records[i].FromByteArray(buffer);
                 }
@@ -65,7 +69,7 @@ namespace AUS2.GeoLoc.Structures
 
         public int GetSize()
         {
-            return sizeof(int) + _Records.Count * _Class.GetSize();
+            return sizeof(int) * 2 + _Records.Count * _Class.GetSize();
         }
     }
 }
