@@ -1,7 +1,9 @@
 ﻿using AUS2.GeoLoc.Structures;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace AUS2.GeoLoc.Tester
@@ -12,21 +14,50 @@ namespace AUS2.GeoLoc.Tester
         {
             var testing = new StructureTester();
             testing.Start();
+
+            int a = 6;
+            int b = a ^ (1 << 1);
+            Console.WriteLine(b);
+
+            //var bil = new List<BlockInformations>();
+            //bil.Add(new BlockInformations { Address = 1, Depth = 1, Records = 1 });
+            //var i = bil.FirstOrDefault(x => x.Address == 1);
+            //i.Address = 2;
+            //Console.WriteLine(bil[0].Address);
+
+            //StructureTest();
+            //Console.WriteLine(BitsOperations.GetIntFromBitArray(new BitArray(new bool[] { false, true, true })));
         }
 
         private static void StructureTest()
         {
             var directory = new ExtendibleHashingDirectory<Property>("file.dat", 3);
-            var iterations = 4;
+            var iterations = 22;
             for (int i = 0; i < iterations; i++) {
-                directory.Add(new Property { Id = 0, Description = "Hoho", RegisterNumber = i });
+                directory.Add(new Property { Id = i, Description = "Hoho", RegisterNumber = i });
             }
 
-            var pFind = new Property();
+            var pFind = new Property { Id = 1};
+            //directory.Delete(pFind);
+            //pFind.Id = 2;
+            //directory.Delete(pFind);
+
             for (int i = 0; i < iterations; i++) {
                 pFind.Id = i;
-                Console.WriteLine(directory.Find(pFind));
+                if (i % 2 == 0)
+                    Console.WriteLine("Delete: " + directory.Delete(pFind));
+                else
+                    Console.WriteLine("Found: " + directory.Find(pFind));
             }
+            //Console.WriteLine("---");
+            //for (int i = 0; i < iterations; i++) {
+            //    directory.Add(new Property { Id = i, Description = "Hoho", RegisterNumber = i });
+            //}
+
+            //for (int i = 0; i < iterations; i++) {
+            //    pFind.Id = i;
+            //    Console.WriteLine(directory.Delete(pFind));
+            //}
         }
 
         private static void BitsConversionTest()

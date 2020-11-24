@@ -24,13 +24,32 @@ namespace AUS2.GeoLoc.Structures
             }
         }
 
-        public List<T> Records => _Records;//.Take(_ValidCount).ToList();
+        public List<T> Records => _Records.Take(ValidCount).ToList();
 
         public bool AddRecord(T record)
         {
             if (ValidCount == _Records.Count) return false; // There is no space for another record
             _Records[ValidCount++] = record;
             return true;
+        }
+
+        public T DeleteRecord(T record)
+        {
+            var recordToDelete = -1;
+            for (int i = 0; i < _BFactor; i++) {
+                if (_Records[i].CustomEquals(record)) {
+                    recordToDelete = i;
+                }
+                if (recordToDelete != - 1 && i != -1 && i == ValidCount - 1) {
+                    if (i != recordToDelete)
+                        _Records[recordToDelete] = _Records[i];
+
+                    --ValidCount;
+                    return _Records[i];
+                }
+            }
+
+            return default(T);
         }
 
         public byte[] ToByteArray()
