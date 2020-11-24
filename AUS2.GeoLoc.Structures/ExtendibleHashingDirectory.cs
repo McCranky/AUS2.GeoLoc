@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace AUS2.GeoLoc.Structures
@@ -25,6 +26,7 @@ namespace AUS2.GeoLoc.Structures
             Init();
         }
 
+        
         public T Find(T data)
         {
             //1. ziskaj prvých D bitov z hashu
@@ -58,7 +60,6 @@ namespace AUS2.GeoLoc.Structures
                     // rozdelenie bloku (split - vytvorenie noveho bloku)
 
 
-
                     // musim vybrať zaznamy z bloku a rozdeliť ich podla novej hlbky (velkosti hashu)
                     var block0 = new Block<T>(BFactor, data.GetEmptyClass()); // blok s bin 0 na konci (parne čislo)
                     var block1 = new Block<T>(BFactor, data.GetEmptyClass()); // blok s bin 1 na konci (neparne čislo)
@@ -66,12 +67,6 @@ namespace AUS2.GeoLoc.Structures
                     block1.BlockDepth = block.BlockDepth + 1;
                     foreach (var record in block.Records) {
                         var bitsFromHash = BitsOperations.GetFirstBits(record.GetHash(), block0.BlockDepth);
-                        //Console.WriteLine(bitsFromHash.Get(block0.BlockDepth - 1));
-                        //BitsOperations.PrintBits(bitsFromHash);
-                        //var index = BitsOperations.GetIntFromBitArray(
-                        //                bitsFromHash
-                        //            );
-                        //Console.WriteLine(index);
 
                         if (bitsFromHash.Get(block0.BlockDepth - 1) == false)
                             block0.AddRecord(record);
@@ -142,13 +137,6 @@ namespace AUS2.GeoLoc.Structures
             fileStream.Read(blockBytes);
             block.FromByteArray(blockBytes);
             return block;
-        }
-
-        private int HashToBlockAddress(BitArray hash)
-        {
-            var blockIndex = BitsOperations.GetIntFromBitArray(hash);
-            //return _directory[blockIndex]; 
-            return 0;
         }
         
         public void Dispose()

@@ -10,15 +10,16 @@ namespace AUS2.GeoLoc.Tester
     {
         static void Main(string[] args)
         {
-            
+            var testing = new StructureTester();
+            testing.Start();
         }
 
         private static void StructureTest()
         {
             var directory = new ExtendibleHashingDirectory<Property>("file.dat", 3);
-            var iterations = 1000;
+            var iterations = 4;
             for (int i = 0; i < iterations; i++) {
-                directory.Add(new Property { Id = i, Description = "Hoho", RegisterNumber = i });
+                directory.Add(new Property { Id = 0, Description = "Hoho", RegisterNumber = i });
             }
 
             var pFind = new Property();
