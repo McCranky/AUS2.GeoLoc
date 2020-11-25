@@ -1,4 +1,4 @@
-﻿using AUS2.GeoLoc.Structures;
+﻿using AUS2.GeoLoc.Structures.Hashing;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -69,7 +69,9 @@ namespace AUS2.GeoLoc.Tester
 
         public BitArray GetHash()
         {
-            return new BitArray(BitConverter.GetBytes(Id));
+            var hash = new BitArray(BitConverter.GetBytes(Id));
+            //hash.Length = 1;
+            return hash;
         }
 
         public bool CustomEquals(Property data)

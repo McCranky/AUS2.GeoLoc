@@ -1,4 +1,6 @@
-﻿using AUS2.GeoLoc.Structures;
+﻿using AUS2.GeoLoc.Structures.Hashing;
+using AUS2.GeoLoc.Structures.Tables;
+using AUS2.GeoLoc.Structures.Utilities;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -12,17 +14,28 @@ namespace AUS2.GeoLoc.Tester
     {
         static void Main(string[] args)
         {
+            //SortedTable<int, int> table = new SortedTable<int, int>();
+            //for (int i = 100; i >= 0; i--) {
+            //    table.Add(i, i);
+            //}
+            //table.RemoveRange(3, 15);
+            //foreach (var item in table.Items) {
+            //    Console.WriteLine(item.Value);
+            //}
+
             var testing = new StructureTester();
             testing.Start();
 
-            int a = 6;
-            int b = a ^ (1 << 1);
-            Console.WriteLine(b);
+            //int a = 6;
+            //int b = a ^ (1 << 1);
+            //Console.WriteLine(b);
 
             //var bil = new List<BlockInformations>();
             //bil.Add(new BlockInformations { Address = 1, Depth = 1, Records = 1 });
             //var i = bil.FirstOrDefault(x => x.Address == 1);
             //i.Address = 2;
+            //Console.WriteLine(bil[0].Address);
+            //i = new BlockInformations { Address = 9 };
             //Console.WriteLine(bil[0].Address);
 
             //StructureTest();
@@ -32,7 +45,7 @@ namespace AUS2.GeoLoc.Tester
         private static void StructureTest()
         {
             var directory = new ExtendibleHashingDirectory<Property>("file.dat", 3);
-            var iterations = 22;
+            var iterations = 5000;
             for (int i = 0; i < iterations; i++) {
                 directory.Add(new Property { Id = i, Description = "Hoho", RegisterNumber = i });
             }
@@ -44,10 +57,11 @@ namespace AUS2.GeoLoc.Tester
 
             for (int i = 0; i < iterations; i++) {
                 pFind.Id = i;
-                if (i % 2 == 0)
-                    Console.WriteLine("Delete: " + directory.Delete(pFind));
-                else
-                    Console.WriteLine("Found: " + directory.Find(pFind));
+                Console.WriteLine("Delete: " + directory.Delete(pFind));
+                //if (i % 2 == 0)
+                //    Console.WriteLine("Delete: " + directory.Delete(pFind));
+                //else
+                //    Console.WriteLine("Found: " + directory.Find(pFind));
             }
             //Console.WriteLine("---");
             //for (int i = 0; i < iterations; i++) {

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace AUS2.GeoLoc.Structures
+namespace AUS2.GeoLoc.Structures.Utilities
 {
     public static class BitsOperations
     {
@@ -36,7 +36,7 @@ namespace AUS2.GeoLoc.Structures
         public static void ReverseBits(ref BitArray array)
         {
             var length = array.Length;
-            var mid = (length / 2);
+            var mid = length / 2;
 
             for (var i = 0; i < mid; i++) {
                 var bit = array[i];

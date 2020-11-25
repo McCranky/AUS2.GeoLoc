@@ -1,4 +1,5 @@
-﻿using AUS2.GeoLoc.Structures;
+﻿using AUS2.GeoLoc.Structures.Hashing;
+using AUS2.GeoLoc.Structures.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -148,7 +149,7 @@ namespace AUS2.GeoLoc.Tester
             var deleteFailures = 0;
             for (int i = 0; i < operationsCount; i++) {
                 var probability = rnd.NextDouble();
-                if (probability < 0.25) // insert
+                if (probability < 0.5) // insert
                     DoInsert(1);
                 else if (helpStructure.Count > 0)
                     if (probability < 0.75) {
@@ -161,6 +162,21 @@ namespace AUS2.GeoLoc.Tester
             }
             Console.WriteLine($"Find Failures: {findFailures}");
             Console.WriteLine($"Delete Failures: {deleteFailures}");
+            //Random gen;
+            //hashing.Dispose();
+
+            //for (int seed = 0; seed < 1000; seed++) {
+            //    var pp = Guid.NewGuid().GetHashCode();
+            //    gen = new Random(pp);
+            //    Console.WriteLine($"Seed: {pp}");
+
+            //    hashing = new ExtendibleHashingDirectory<Property>("file.dat", 3);
+            //    helpStructure = new Dictionary<int, Property>();
+
+
+
+            //    hashing.Dispose();
+            //}
         }
 
         private void GetInput()

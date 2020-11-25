@@ -4,11 +4,11 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace AUS2.GeoLoc.Structures
+namespace AUS2.GeoLoc.Structures.Hashing
 {
     public class Block<T> : IRecord where T : IData<T>
     {
-        private readonly int _BFactor;
+        public int BFactor { get; private set; }
         private readonly T _Class;
         private readonly List<T> _Records;
         public int ValidCount { get; set; } = 0;
@@ -16,10 +16,10 @@ namespace AUS2.GeoLoc.Structures
 
         public Block(int bFactor, T t)
         {
-            _BFactor = bFactor;
+            BFactor = bFactor;
             _Class = t;
-            _Records = new List<T>(_BFactor);
-            for (int i = 0; i < _BFactor; i++) {
+            _Records = new List<T>(BFactor);
+            for (int i = 0; i < BFactor; i++) {
                 _Records.Add(_Class.GetEmptyClass());
             }
         }
@@ -36,11 +36,11 @@ namespace AUS2.GeoLoc.Structures
         public T DeleteRecord(T record)
         {
             var recordToDelete = -1;
-            for (int i = 0; i < _BFactor; i++) {
-                if (_Records[i].CustomEquals(record)) {
+            for (int i = 0; i < BFactor; i++) {
+                if (recordToDelete == -1 && _Records[i].CustomEquals(record)) {
                     recordToDelete = i;
                 }
-                if (recordToDelete != - 1 && i != -1 && i == ValidCount - 1) {
+                if (recordToDelete != -1 && i == ValidCount - 1) {
                     if (i != recordToDelete)
                         _Records[recordToDelete] = _Records[i];
 
@@ -49,7 +49,7 @@ namespace AUS2.GeoLoc.Structures
                 }
             }
 
-            return default(T);
+            return default;
         }
 
         public byte[] ToByteArray()
@@ -74,7 +74,7 @@ namespace AUS2.GeoLoc.Structures
                 var buffer = new byte[sizeof(int)];
                 ms.Read(buffer);
                 ValidCount = BitConverter.ToInt32(buffer);
-                
+
                 ms.Read(buffer);
                 BlockDepth = BitConverter.ToInt32(buffer);
 

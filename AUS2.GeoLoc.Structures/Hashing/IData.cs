@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 
-namespace AUS2.GeoLoc.Structures
+namespace AUS2.GeoLoc.Structures.Hashing
 {
     public interface IData<T> : IRecord
     {

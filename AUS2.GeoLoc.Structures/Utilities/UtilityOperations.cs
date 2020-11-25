@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace AUS2.GeoLoc.Structures
+namespace AUS2.GeoLoc.Structures.Utilities
 {
     public static class UtilityOperations
     {
