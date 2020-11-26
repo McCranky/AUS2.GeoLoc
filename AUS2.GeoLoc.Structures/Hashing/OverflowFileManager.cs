@@ -100,6 +100,7 @@ namespace AUS2.GeoLoc.Structures.Hashing
                         _blocksInfoTable.Remove(address);
                         FreeAddress(address);
                     }
+                    WriteBytes(address, helpBlock.ToByteArray());
                     canContinue = false;
                 }
             }
@@ -126,6 +127,7 @@ namespace AUS2.GeoLoc.Structures.Hashing
             var record = helpBlock.Records[0];
             helpBlock.DeleteRecord(record);
             --helpBlockInfo.Records;
+            WriteBytes(address, helpBlock.ToByteArray());
 
             block.AddRecord(record);
 

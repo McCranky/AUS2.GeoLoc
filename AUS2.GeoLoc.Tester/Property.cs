@@ -70,7 +70,7 @@ namespace AUS2.GeoLoc.Tester
         public BitArray GetHash()
         {
             var hash = new BitArray(BitConverter.GetBytes(Id));
-            //hash.Length = 1;
+            hash.Length = 1;
             return hash;
         }
 
