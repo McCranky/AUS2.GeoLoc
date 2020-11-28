@@ -90,13 +90,37 @@ namespace AUS2.GeoLoc.Tester
                     var operationsCount = int.Parse(Console.ReadLine()!);
                     DoRandomOperations(operationsCount);
                     break;
-                case 4: // Exit
+                case 4: // Save
+                    hashing.Save();
+                    break;
+                case 5: // Clear
+                    Clear();
+                    break;
+                case 6: // Exit
                     exit = true;
                     break;
                 default:
                     exit = true;
                     break;
             }
+        }
+
+        private void Clear()
+        {
+            var prop = new Property();
+            var counter = 0;
+            foreach (var item in helpStructure) {
+                ++counter;
+                prop.Id = item.Key;
+                if (!hashing.Delete(prop)) {
+                    Console.WriteLine("Cannot delete: " + prop.Id);
+                }
+
+            }
+            //for (int i = 0; i < idSequence; i++) {
+            //    prop.Id = i;
+            //    hashing.Delete(prop);
+            //}
         }
 
         private bool DoDelete(int deleteId = -1)
@@ -118,11 +142,17 @@ namespace AUS2.GeoLoc.Tester
 
         private bool DoFind(int id = -1)
         {
-            if (helpStructure.Count < 1) return false;
+            //if (helpStructure.Count < 1) return false;
             
             if (id >= 0) {
                 var prop = new Property() { Id = id };
-                return hashing.Find(prop).CustomEquals(helpStructure[id]);
+                if (id == 5032) {
+                    return hashing.Find(prop) != null;
+                }
+                if (helpStructure.TryGetValue(id, out prop)) {
+                    return hashing.Find(prop).CustomEquals(prop);
+                }
+                return false;
             } else {
                 var key = rnd.Next() % helpStructure.Count;
                 var pair = helpStructure.ElementAt(key);
@@ -183,7 +213,7 @@ namespace AUS2.GeoLoc.Tester
         {
             Console.Write("Input:~ $ ");
             var inp = Console.ReadLine();
-            input = string.IsNullOrWhiteSpace(inp) ? 4 : int.Parse(inp);
+            input = string.IsNullOrWhiteSpace(inp) ? 6 : int.Parse(inp);
         }
 
         private void PrintMenu()
@@ -192,7 +222,9 @@ namespace AUS2.GeoLoc.Tester
             Console.WriteLine("[1] Find");
             Console.WriteLine("[2] Delete");
             Console.WriteLine("[3] Random Operations");
-            Console.WriteLine("[4] Exit");
+            Console.WriteLine("[4] Save");
+            Console.WriteLine("[5] Clear");
+            Console.WriteLine("[6] Exit");
         }
     }
 }

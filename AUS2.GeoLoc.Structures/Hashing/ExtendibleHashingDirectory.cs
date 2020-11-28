@@ -6,6 +6,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using AUS2.GeoLoc.Structures.Utilities;
+using AUS2.GeoLoc.Structures.FileManagers;
 
 namespace AUS2.GeoLoc.Structures.Hashing
 {
@@ -14,32 +15,155 @@ namespace AUS2.GeoLoc.Structures.Hashing
         public int BFactor { get; private set; }
         private FileManager fileManager;
         private OverflowFileManager<T> overflowManager;
-        private List<BlockInformations> _blocksInformations;
+        private List<BlockInfo> _blocksInformations;
+        private string _filePath;
         private int _hashDepth = 1;
 
-        public ExtendibleHashingDirectory(string filePath, int bFactor)
+        public ExtendibleHashingDirectory(string filePath, int bFactor = -1)
         {
-            BFactor = bFactor; //TODO?? ak bude čas tak dorobyť automaticke vypočitanie na zaklade velkosti clustera a T
-            _blocksInformations = new List<BlockInformations>((int)Math.Pow(2, _hashDepth));
-
-            Init(filePath);
+            if (bFactor == -1) {
+                UtilityOperations.GetDiskFreeSpace("C:\\", out var SectorsPerCluster, out var BytesPerSector, out var NumberOfFreeClusters, out var TotalNumberOfClusters);
+                var ClusterSize = SectorsPerCluster * BytesPerSector;
+                var emptyObject = (T)Activator.CreateInstance(typeof(T));
+                BFactor = (ClusterSize - 8) / emptyObject.GetSize();
+            } else {
+                BFactor = bFactor;
+            }
+            
+            _filePath = filePath;
+            if (!TryLoad()) {
+                Init();
+            }
         }
 
-        private void Init(string filePath)
+        private void Init()
         {
+            _blocksInformations = new List<BlockInfo>((int)Math.Pow(2, _hashDepth));
+
             var classInstance = (T)Activator.CreateInstance(typeof(T));
             var block = new Block<T>(BFactor, classInstance.GetEmptyClass());
 
-            fileManager = new FileManager(filePath, block.GetSize());
-            overflowManager = new OverflowFileManager<T>("overflow." + filePath, block.GetSize());
+            fileManager = new FileManager(_filePath, block.GetSize());
+            overflowManager = new OverflowFileManager<T>("overflow." + _filePath, block.GetSize());
 
             var address = fileManager.GetFreeAddress();
-            _blocksInformations.Add(new BlockInformations { Address = address, Depth = 1, Records = 0 });
+            _blocksInformations.Add(new BlockInfo { Address = address, Depth = 1, Records = 0 });
             WriteBlock(address, block);
 
             address = fileManager.GetFreeAddress();
-            _blocksInformations.Add(new BlockInformations { Address = address, Depth = 1, Records = 0 });
+            _blocksInformations.Add(new BlockInfo { Address = address, Depth = 1, Records = 0 });
             WriteBlock(address, block);
+        }
+
+        public void Save()
+        {
+            var stream = new FileStream("config." + _filePath, FileMode.OpenOrCreate);
+            //stream.Seek(stream.Length, SeekOrigin.Begin);
+
+            stream.Write(BitConverter.GetBytes(_hashDepth));
+            stream.Write(BitConverter.GetBytes(_blocksInformations.Count));
+
+
+            if (_blocksInformations.Count > 0) {
+                var distinctCount = _blocksInformations.Distinct().Count();
+                stream.Write(BitConverter.GetBytes(distinctCount));
+
+                var currentInfo = _blocksInformations[0];
+                var count = 0;
+
+                for (int i = 0; i < _blocksInformations.Count; i++) {
+                    if (_blocksInformations[i].Address == currentInfo.Address) {
+                        ++count;
+                        if (i == _blocksInformations.Count - 1) {
+                            stream.Write(BitConverter.GetBytes(count));
+                            stream.Write(currentInfo.ToByteArray());
+                            break;
+                        }
+                    } else {
+                        stream.Write(BitConverter.GetBytes(count));
+                        stream.Write(currentInfo.ToByteArray());
+
+                        currentInfo = _blocksInformations[i];
+                        count = 1;
+                    }
+                }
+                stream.Write(BitConverter.GetBytes(count));
+                stream.Write(currentInfo.ToByteArray());
+            }
+            stream.Write(fileManager.ToByteArray());
+            stream.Write(overflowManager.ToByteArray());
+
+            stream.Close();
+        }
+
+        public bool TryLoad()
+        {
+            try {
+                var stream = new FileStream("config." + _filePath, FileMode.Open);
+                var buffer = new byte[sizeof(int)];
+
+                // inicializacia managerov
+                var classInstance = (T)Activator.CreateInstance(typeof(T));
+                var block = new Block<T>(BFactor, classInstance.GetEmptyClass());
+
+                fileManager = new FileManager(_filePath, block.GetSize());
+                overflowManager = new OverflowFileManager<T>("overflow." + _filePath, block.GetSize());
+                _blocksInformations = new List<BlockInfo>((int)Math.Pow(2, _hashDepth));
+
+
+                // citanie suboru
+                stream.Read(buffer);
+                _hashDepth = BitConverter.ToInt32(buffer);
+
+                stream.Read(buffer);
+                var blocksInfoCount = BitConverter.ToInt32(buffer);
+
+                if (blocksInfoCount > 0) {
+                    stream.Read(buffer);
+                    var distinctCount = BitConverter.ToInt32(buffer);
+
+                    BlockInfo blockInfo;
+
+                    for (int i = 0; i < distinctCount; i++) {
+                        // zistom kolko opakovani
+                        stream.Read(buffer);
+                        var repetition = BitConverter.ToInt32(buffer);
+                        // ziskam blockInfo
+                        blockInfo = new BlockInfo();
+                        buffer = new byte[blockInfo.GetSize()];
+                        stream.Read(buffer);
+                        blockInfo.FromByteArray(buffer);
+                        // vlozim info potrebny pocet krat
+                        while (repetition-- > 0) {
+                            _blocksInformations.Add(blockInfo);
+                        }
+
+                        buffer = new byte[sizeof(int)];
+                    }
+                }
+
+                stream.Read(buffer);
+                var fileManagerAddresses = BitConverter.ToInt32(buffer);
+                if (fileManagerAddresses > 0) {
+                    buffer = new byte[sizeof(int) * fileManagerAddresses];
+                    fileManager.FromByteArray(buffer);
+                }
+
+                var overflowManagerSize = stream.Length - stream.Position;
+                buffer = new byte[overflowManagerSize];
+                stream.Read(buffer);
+                overflowManager.FromByteArray(buffer);
+
+                return true;
+            } catch (FileNotFoundException ex) {
+                Console.WriteLine("File " + ex.FileName + " does not exist.");
+                return false;
+            }
+        }
+
+        public List<int> GetBlockAddresses()
+        {
+            return _blocksInformations.Distinct().Select(info => info.Address).ToList();
         }
 
         public T Find(T data)
@@ -149,7 +273,7 @@ namespace AUS2.GeoLoc.Structures.Hashing
             return true;
         }
 
-        private bool TryMergeOperation(ref Block<T> block, ref int blockIndex, ref BlockInformations blockInfo, out int depth)
+        private bool TryMergeOperation(ref Block<T> block, ref int blockIndex, ref BlockInfo blockInfo, out int depth)
         {
             depth = -1;
             if (_hashDepth == 1) return false;
@@ -182,7 +306,7 @@ namespace AUS2.GeoLoc.Structures.Hashing
             --_hashDepth;
             var step = FindSmallestSequene();
             if (step <= 1) return false;
-            var newAddresses = new List<BlockInformations>((int)Math.Pow(2, _hashDepth));
+            var newAddresses = new List<BlockInfo>((int)Math.Pow(2, _hashDepth));
             for (int i = 0; i < (int)Math.Pow(2, _hashDepth); i++) {
                 newAddresses.Add(_blocksInformations[i * step]);
             }
@@ -207,7 +331,7 @@ namespace AUS2.GeoLoc.Structures.Hashing
             return min;
         }
 
-        private void UpdateAddresses(BlockInformations fromInfo, BlockInformations toInfo)
+        private void UpdateAddresses(BlockInfo fromInfo, BlockInfo toInfo)
         {
             var index = _blocksInformations.IndexOf(fromInfo);
             while (index <= _blocksInformations.Count - 1 && _blocksInformations[index] == fromInfo) {
@@ -220,7 +344,7 @@ namespace AUS2.GeoLoc.Structures.Hashing
             if (_hashDepth == hashSize) return false;
 
             ++_hashDepth;
-            var newInformations = new List<BlockInformations>((int)Math.Pow(2, _hashDepth));
+            var newInformations = new List<BlockInfo>((int)Math.Pow(2, _hashDepth));
             for (int i = 0; i < (int)Math.Pow(2, _hashDepth - 1); i++) {
                 newInformations.Add(_blocksInformations[i]);
                 newInformations.Add(_blocksInformations[i]);
@@ -229,7 +353,7 @@ namespace AUS2.GeoLoc.Structures.Hashing
             return true;
         }
 
-        private void UpdateNewAddresses(BlockInformations fromBlockInfo, BlockInformations toBlockInfo)
+        private void UpdateNewAddresses(BlockInfo fromBlockInfo, BlockInfo toBlockInfo)
         {
             var firstIndexOfAddress = _blocksInformations.IndexOf(fromBlockInfo);
             var lastIndexOfAddress = _blocksInformations.LastIndexOf(fromBlockInfo);
@@ -239,7 +363,7 @@ namespace AUS2.GeoLoc.Structures.Hashing
             }
         }
 
-        private void SplitOperation(ref T data, ref Block<T> block, BlockInformations blockInfo)
+        private void SplitOperation(ref T data, ref Block<T> block, BlockInfo blockInfo)
         {
             var block0 = new Block<T>(BFactor, data.GetEmptyClass()); // blok s bin 0 na konci (parne čislo)
             var block1 = new Block<T>(BFactor, data.GetEmptyClass()); // blok s bin 1 na konci (neparne čislo)
@@ -262,7 +386,7 @@ namespace AUS2.GeoLoc.Structures.Hashing
 
             blockInfo.Records = block0.ValidCount;
             blockInfo.Depth = newDepth;
-            var newBlockInfo = new BlockInformations { Address = address, Depth = newDepth, Records = block1.ValidCount };
+            var newBlockInfo = new BlockInfo { Address = address, Depth = newDepth, Records = block1.ValidCount };
 
             UpdateNewAddresses(blockInfo, newBlockInfo);
 
@@ -285,9 +409,9 @@ namespace AUS2.GeoLoc.Structures.Hashing
                 );
         }
 
-        private Block<T> GetBlock(T data, out BlockInformations info, out int index)
+        private Block<T> GetBlock(T data, out BlockInfo info, out int index)
         {
-            info = new BlockInformations();
+            info = new BlockInfo();
             //1. ziskaj index
             index = GetIndexFromHash(data.GetHash());
             if (index >= _blocksInformations.Count) return null;
@@ -297,13 +421,13 @@ namespace AUS2.GeoLoc.Structures.Hashing
             return ReadBlock(info.Address);
         }
 
-        private BlockInformations GetNeighborInformations(int blockIndex, int blockDepth, out int neighborIndex)
+        private BlockInfo GetNeighborInformations(int blockIndex, int blockDepth, out int neighborIndex)
         {
             neighborIndex = blockIndex ^ 1 << _hashDepth - blockDepth;
             return GetBlockInformations(neighborIndex);
         }
 
-        private BlockInformations GetBlockInformations(int blockIndex)
+        private BlockInfo GetBlockInformations(int blockIndex)
         {
             return _blocksInformations[blockIndex];//.FirstOrDefault(info => info.Address == blockAddress);
         }

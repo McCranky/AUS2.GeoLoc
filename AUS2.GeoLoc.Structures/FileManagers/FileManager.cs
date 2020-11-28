@@ -1,12 +1,13 @@
-﻿using AUS2.GeoLoc.Structures.Tables;
+﻿using AUS2.GeoLoc.Structures.Hashing;
+using AUS2.GeoLoc.Structures.Tables;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace AUS2.GeoLoc.Structures.Hashing
+namespace AUS2.GeoLoc.Structures.FileManagers
 {
-    public class FileManager : IDisposable
+    public class FileManager : IDisposable, IRecord
     {
         private FileStream _fileStream;
         private SortedTable<int, int> _freeAddresses;
@@ -25,7 +26,7 @@ namespace AUS2.GeoLoc.Structures.Hashing
         public int GetFreeAddress()
         {
             if (_freeAddresses.Count > 0) {
-                var address = _freeAddresses[0].Value;
+                var address = _freeAddresses.Items[0].Value;
                 _freeAddresses.Items.RemoveAt(0);
                 return address;
             }
@@ -79,6 +80,37 @@ namespace AUS2.GeoLoc.Structures.Hashing
             if (_fileStream != null) {
                 _fileStream.Close();
             }
+        }
+
+        public virtual byte[] ToByteArray()
+        {
+            byte[] result;
+            using (var ms = new MemoryStream()) {
+                ms.Write(BitConverter.GetBytes(_freeAddresses.Count));
+
+                for (int i = 0; i < _freeAddresses.Count; i++) {
+                    ms.Write(BitConverter.GetBytes(_freeAddresses.Items[i].Key));
+                }
+                result = ms.ToArray();
+            }
+            return result;
+        }
+
+        public virtual void FromByteArray(byte[] array)
+        {
+            using (var ms = new MemoryStream(array)) {
+                var buffer = new byte[sizeof(int)];
+                while (ms.Position < ms.Length) {
+                    ms.Read(buffer);
+                    var address = BitConverter.ToInt32(buffer);
+                    _freeAddresses.Add(address, address);
+                }
+            }
+        }
+
+        public virtual int GetSize()
+        {
+            return sizeof(int) * (_freeAddresses.Count + 1); // 1 - počet prvkov
         }
     }
 }

@@ -14,32 +14,15 @@ namespace AUS2.GeoLoc.Tester
     {
         static void Main(string[] args)
         {
-            //SortedTable<int, int> table = new SortedTable<int, int>();
-            //for (int i = 100; i >= 0; i--) {
-            //    table.Add(i, i);
-            //}
-            //table.RemoveRange(3, 15);
-            //foreach (var item in table.Items) {
-            //    Console.WriteLine(item.Value);
-            //}
-
             var testing = new StructureTester();
             testing.Start();
 
-            //int a = 6;
-            //int b = a ^ (1 << 1);
-            //Console.WriteLine(b);
-
-            //var bil = new List<BlockInformations>();
-            //bil.Add(new BlockInformations { Address = 1, Depth = 1, Records = 1 });
-            //var i = bil.FirstOrDefault(x => x.Address == 1);
-            //i.Address = 2;
-            //Console.WriteLine(bil[0].Address);
-            //i = new BlockInformations { Address = 9 };
-            //Console.WriteLine(bil[0].Address);
-
-            //StructureTest();
-            //Console.WriteLine(BitsOperations.GetIntFromBitArray(new BitArray(new bool[] { false, true, true })));
+            //var bil = new List<BlockInfo>();
+            //var info = new BlockInfo { Address = 1, Depth = 1 };
+            //bil.Add(info);
+            //bil.Add(info);
+            //bil.Add(info);
+            //Console.WriteLine(bil.Distinct().Count());
         }
 
         private static void StructureTest()
