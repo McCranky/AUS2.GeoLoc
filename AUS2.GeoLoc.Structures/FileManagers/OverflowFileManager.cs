@@ -9,17 +9,22 @@ namespace AUS2.GeoLoc.Structures.FileManagers
 {
     public class OverflowFileManager<T> : FileManager, IRecord where T : IData<T>
     {
-        private SortedTable<int, BlockInfo> _blocksInfoTable;
+        private SortedTable<int, OverflowBlockInfo> _blocksInfoTable;
 
         public OverflowFileManager(string filePath, int blockSize) : base(filePath, blockSize)
         {
-            _blocksInfoTable = new SortedTable<int, BlockInfo>();
+            _blocksInfoTable = new SortedTable<int, OverflowBlockInfo>();
         }
 
-        public void GetBlockAndInfo(int address, ref Block<T> block, ref BlockInfo blockInfo)
+        public void GetBlockAndInfo(int address, ref Block<T> block, out OverflowBlockInfo blockInfo)
         {
             ReadBlock(address, ref block);
             blockInfo = _blocksInfoTable[address].Value;
+        }
+
+        public OverflowBlockInfo GetOverflowInfo(int address)
+        {
+            return _blocksInfoTable[address].Value;
         }
 
         public void Add(ref T data, ref Block<T> block, ref BlockInfo blockInfo)
@@ -45,13 +50,25 @@ namespace AUS2.GeoLoc.Structures.FileManagers
                     WriteBytes(nextAddress, block.ToByteArray());
                     foundPlace = true;
                 } else {
-                    if (info.OverflowAddress != int.MinValue) {
-                        nextAddress = info.OverflowAddress;
+                    if (info.NextOwerflowAddress != int.MinValue) {
+                        nextAddress = info.NextOwerflowAddress;
                     } else {
-                        AddNewBlock(ref data, ref block, ref info);
+                        AddNewOverflowBlock(ref data, ref block, ref info);
+                        foundPlace = true;
                     }
                 }
             }
+        }
+
+        private void AddNewOverflowBlock(ref T data, ref Block<T> block, ref OverflowBlockInfo blockInfo)
+        {
+            var address = GetFreeAddress();
+            block.ValidCount = 0;
+            block.AddRecord(data);
+            WriteBytes(address, block.ToByteArray());
+            blockInfo.NextOwerflowAddress = address;
+
+            _blocksInfoTable.Add(address, new OverflowBlockInfo());
         }
 
         private void AddNewBlock(ref T data, ref Block<T> block, ref BlockInfo blockInfo)
@@ -62,11 +79,21 @@ namespace AUS2.GeoLoc.Structures.FileManagers
             WriteBytes(address, block.ToByteArray());
             blockInfo.OverflowAddress = address;
 
-            _blocksInfoTable.Add(address, new BlockInfo {
-                Address = address,
-                Depth = block.BlockDepth,
-                Records = 1
-            });
+            _blocksInfoTable.Add(address, new OverflowBlockInfo());
+        }
+
+        public bool Update(int overflowAddress, ref Block<T> block, ref T data)
+        {
+            while (overflowAddress != int.MinValue) {
+                ReadBlock(overflowAddress, ref block);
+                if (block.UpdateRecord(data)) {
+                    WriteBytes(overflowAddress, block.ToByteArray());
+                    return true;
+                }
+
+                overflowAddress = _blocksInfoTable[overflowAddress].Value.NextOwerflowAddress;
+            }
+            return false;
         }
 
         private void ReadBlock(int address, ref Block<T> block)
@@ -80,6 +107,7 @@ namespace AUS2.GeoLoc.Structures.FileManagers
         {
             // aktualizovat blockInfo ak sa vyprazdnil blok na ktory ukazuje
             var address = blockInfo.OverflowAddress;
+            OverflowBlockInfo beforeInfo = null;
 
             var canContinue = true;
             while (canContinue) {
@@ -87,8 +115,9 @@ namespace AUS2.GeoLoc.Structures.FileManagers
                 var info = _blocksInfoTable[address].Value;
 
                 if (helpBlock.DeleteRecord(data) == null) {
-                    if (info.OverflowAddress != int.MinValue) {
-                        address = info.OverflowAddress;
+                    if (info.NextOwerflowAddress != int.MinValue) {
+                        beforeInfo = info;
+                        address = info.NextOwerflowAddress;
                     } else {
                         // zaznam nebol najdeny
                         canContinue = false;
@@ -99,7 +128,11 @@ namespace AUS2.GeoLoc.Structures.FileManagers
                         // blok ostal prazdny tak prenastavime povodnemu bloku novu adresu zretazenia
                         // odstranime už nepotrebnu informaciu
                         // uvolnime adresu
-                        blockInfo.OverflowAddress = info.OverflowAddress;
+                        if (beforeInfo != null) {
+                            beforeInfo.NextOwerflowAddress = info.NextOwerflowAddress;
+                        } else {
+                            blockInfo.OverflowAddress = info.NextOwerflowAddress;
+                        }
                         _blocksInfoTable.Remove(address);
                         FreeAddress(address);
                     }
@@ -114,42 +147,50 @@ namespace AUS2.GeoLoc.Structures.FileManagers
             // najdeme najväčšiu adresu a z nej zobereme, aby sme uvolnovali miesto z konca
             var address = blockInfo.OverflowAddress;
             var beforeAddress = -1;
+            var maxAddress = -1;
 
             while (true) {
-                var key = _blocksInfoTable[address].Value.OverflowAddress;
+                var key = _blocksInfoTable[address].Value.NextOwerflowAddress;
                 if (key == int.MinValue) {
                     break;
-                } else if (key > address) {
-                    beforeAddress = address;
-                    address = key;
                 }
+                if (key > maxAddress) {
+                    maxAddress = key;
+                    beforeAddress = address;
+                }
+
+                address = key;
+            }
+            if (maxAddress == -1) {
+                maxAddress = address;
             }
 
-            var helpBlockInfo = _blocksInfoTable[address].Value;
-            ReadBlock(address, ref helpBlock);
+            var helpBlockInfo = _blocksInfoTable[maxAddress].Value;
+            ReadBlock(maxAddress, ref helpBlock);
             var record = helpBlock.Records[0];
             helpBlock.DeleteRecord(record);
             --helpBlockInfo.Records;
-            WriteBytes(address, helpBlock.ToByteArray());
-
-            block.AddRecord(record);
 
             if (helpBlockInfo.Records == 0) {
                 if (beforeAddress != -1) {
                     // nejaka adresa ukazuje na tuto tka ju musime aktualizovat ale povodneho bloku informaciu nemusime aktualizovat
-                    _blocksInfoTable[beforeAddress].Value.OverflowAddress = helpBlockInfo.OverflowAddress;
+                    _blocksInfoTable[beforeAddress].Value.NextOwerflowAddress = helpBlockInfo.NextOwerflowAddress;
                 } else {
-                    blockInfo.OverflowAddress = helpBlockInfo.OverflowAddress;
+                    blockInfo.OverflowAddress = helpBlockInfo.NextOwerflowAddress;
                 }
-                _blocksInfoTable.Remove(address);
-                FreeAddress(address);
+                _blocksInfoTable.Remove(maxAddress);
+                FreeAddress(maxAddress);
+            } else {
+                WriteBytes(maxAddress, helpBlock.ToByteArray());
             }
+
+            block.AddRecord(record);
         }
 
         public override int GetSize()
         {
             var result = sizeof(int) * (1 + _blocksInfoTable.Count);
-            result += ((BlockInfo)Activator.CreateInstance(typeof(BlockInfo))).GetSize() * _blocksInfoTable.Count;
+            result += ((OverflowBlockInfo)Activator.CreateInstance(typeof(OverflowBlockInfo))).GetSize() * _blocksInfoTable.Count;
             return result + base.GetSize();
         }
 
@@ -182,14 +223,14 @@ namespace AUS2.GeoLoc.Structures.FileManagers
                 var infoCount = BitConverter.ToInt32(buffer);
 
                 if (infoCount > 0) {
-                    BlockInfo info;
+                    OverflowBlockInfo info;
 
                     for (int i = 0; i < infoCount; i++) {
                         //kluc
                         ms.Read(buffer);
                         var key = BitConverter.ToInt32(buffer);
                         //info
-                        info = new BlockInfo();
+                        info = new OverflowBlockInfo();
                         buffer = new byte[info.GetSize()];
                         ms.Read(buffer);
                         info.FromByteArray(buffer);
@@ -206,7 +247,7 @@ namespace AUS2.GeoLoc.Structures.FileManagers
                     buffer = new byte[sizeof(int) * fileManagerAddresses];
                     base.FromByteArray(buffer);
                 }
-            }            
+            }
         }
     }
 }

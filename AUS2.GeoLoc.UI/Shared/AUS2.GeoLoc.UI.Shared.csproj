@@ -4,4 +4,8 @@
     <TargetFramework>netstandard2.1</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\AUS2.GeoLoc.Structures\AUS2.GeoLoc.Structures.csproj" />
+  </ItemGroup>
+
 </Project>

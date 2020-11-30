@@ -1,0 +1,166 @@
+﻿@page "/structure"
+@inject HttpClient Http
+
+
+<h2 class="m-3">Structure</h2>
+<div class="btn-group m-3" role="group" aria-label="Structure operations">
+    <button type="button" class="btn btn-success" @onclick="Save">Save</button>
+    <div class="input-group m-3">
+        <div class="input-group-prepend">
+            <button class="btn btn-outline-secondary" type="button" @onclick="Seed">Seed</button>
+        </div>
+        <input type="number" class="form-control" placeholder="1000" @bind-value="count">
+    </div>
+</div>
+
+    @if (addresses != null) {
+        <div class="d-flex flex-row">
+            <div class="list-group">
+                @foreach (var address in addresses) {
+                    <button type="button" class="list-group-item list-group-item-action"
+                            @onclick="(() => GetAllForAddress(address))">
+                        @address
+                        </button>
+                    }
+            </div>
+
+            @if (blockModel != null) {
+                <table class="table table-sm">
+                    <thead class="justify-content-center text-center">
+                        <tr>
+                            <th>Info</th>
+                            <th>Data</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <table class="table table-striped">
+                                    <tbody class="text-center">
+                                        <tr>
+                                            <th>Address</th>
+                                            <td>@blockModel.Info.Address</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Records</th>
+                                            <td>@blockModel.Info.Records</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Depth</th>
+                                            <td>@blockModel.Info.Depth</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Overflow</th>
+                                            <td>@blockModel.Info.OverflowAddress</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </td>
+                            <td>
+                                <table class="table table-striped">
+                                    <tbody class="text-center">
+                                        <tr>
+                                            <th>BFactor</th>
+                                            <td>@blockModel.Data.BFactor</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Depth</th>
+                                            <td>@blockModel.Data.BlockDepth</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Valid</th>
+                                            <td>@blockModel.Data.ValidCount</td>
+                                        </tr>
+                                        @foreach (var record in blockModel.Data.Records) {
+                                            <tr class="text-center"><td colspan="2">@record</td></tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                        @if (overflowChain != null) {
+                            <tr class="text-center"><th colspan="2">Overflow sequence</th></tr>
+                            foreach (var pair in overflowChain) {
+                                <tr>
+                                    <td>
+                                        <table class="table table-striped">
+                                            <tbody>
+                                                <tr>
+                                                    <th>Next Overflow Address</th>
+                                                    <td>@pair.Info.NextOverflowAddress</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Records</th>
+                                                    <td>@pair.Info.Records</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table class="table table-striped">
+                                            <tbody>
+                                                <tr>
+                                                    <th>BFactor</th>
+                                                    <td>@pair.Data.BFactor</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Depth</th>
+                                                    <td>@pair.Data.BlockDepth</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Valid</th>
+                                                    <td>@pair.Data.ValidCount</td>
+                                                </tr>
+                                                @foreach (var record in pair.Data.Records) {
+                                                    <tr class="text-center"><td colspan="2">@record</td></tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+
+    } else {
+        <p>Loading...</p>
+    }
+
+    @code {
+        private int count;
+        private List<int> addresses;
+        private BlockModel blockModel;
+        private List<OverflowBlockModel> overflowChain;
+
+        protected override async Task OnInitializedAsync()
+        {
+            addresses = await Http.GetFromJsonAsync<List<int>>("addresses");
+            StateHasChanged();
+        }
+
+        private async Task GetAllForAddress(int address)
+        {
+            blockModel = await Http.GetFromJsonAsync<BlockModel>($"address/{address}");
+
+            if (blockModel.Info.OverflowAddress != int.MinValue) {
+                overflowChain = await Http.GetFromJsonAsync<List<OverflowBlockModel>>($"overflow/{address}");
+            } else {
+                overflowChain = null;
+            }
+
+            StateHasChanged();
+        }
+
+        private async Task Seed()
+        {
+            await Http.GetAsync($"seed/{count}");
+        }
+
+        private async Task Save()
+        {
+            await Http.GetAsync("save");
+        }
+    }

@@ -5,9 +5,9 @@ using System.Text;
 
 namespace AUS2.GeoLoc.Structures.Hashing
 {
-    public class OwerflovBlockInfo : IRecord
+    public class OverflowBlockInfo : IRecord
     {
-        public int Records { get; set; } = 0;
+        public int Records { get; set; } = 1;
         public int NextOwerflowAddress { get; set; } = int.MinValue;
 
         public void FromByteArray(byte[] array)

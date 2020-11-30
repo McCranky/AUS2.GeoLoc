@@ -146,9 +146,9 @@ namespace AUS2.GeoLoc.Tester
             
             if (id >= 0) {
                 var prop = new Property() { Id = id };
-                if (id == 5032) {
-                    return hashing.Find(prop) != null;
-                }
+                //if (id == 5032) {
+                //    return hashing.Find(prop) != null;
+                //}
                 if (helpStructure.TryGetValue(id, out prop)) {
                     return hashing.Find(prop).CustomEquals(prop);
                 }

@@ -51,6 +51,9 @@ namespace AUS2.GeoLoc.Structures.FileManagers
 
                 _fileStream.Seek(0, SeekOrigin.Begin);
                 _fileStream.SetLength(LastAddress - blocksToErase * _blockSize);
+                if (blocksToErase > 1) { // lebo ak je 1, tak sa tam ani nedostala
+                    _freeAddresses.RemoveRange(_freeAddresses.Count - blocksToErase - 1, blocksToErase - 1);
+                }
             } else {
                 _freeAddresses.Add(address, address);
             }

@@ -7,18 +7,9 @@ using System.Text;
 
 namespace AUS2.GeoLoc.Tester
 {
-    public class Gps
-    {
-        public double Latitude { get; set; }
-        public char LatitudeSymbol { get; set; }
-        public double Longitude { get; set; }
-        public char LongitudeSymbol { get; set; }
-    }
-
     public class Property : IData<Property>
     {
         public const int MaxDescriptionLength = 20;
-        //TODO Add 2x Gps 
         public int Id { get; set; } = int.MinValue;
         public int RegisterNumber { get; set; } = int.MinValue;
         public string Description{ get; set; } = string.Empty;

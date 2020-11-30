@@ -1,0 +1,129 @@
+﻿@page "/properties"
+@inject HttpClient Http
+
+<h2 class="m-3">Properties</h2>
+
+@if (showAddForm) {
+<form @onsubmit="HandleAdd">
+    <button type="submit" class="btn btn-info">Confirm</button>
+
+    <div class="form-group">
+        <label for="exampleFormControlInput1">Register Number</label>
+        <input type="number" class="form-control" id="exampleFormControlInput1" @bind-value="registerNumber">
+    </div>
+
+    <div class="form-group">
+        <label for="exampleFormControlInput1">Description</label>
+        <input type="text" class="form-control" id="exampleFormControlInput1" @bind-value="description">
+    </div>
+
+    <div class="input-group">
+        <div class="input-group-prepend">
+            <span class="input-group-text">Gps1</span>
+        </div>
+        <input type="text" class="form-control" @bind-value="gps1.LatitudeSymbol">
+        <input type="number" step="0.01" class="form-control" @bind-value="gps1.Latitude">
+        <input type="text" class="form-control" @bind-value="gps1.LongitudeSymbol">
+        <input type="number" step="0.01" class="form-control" @bind-value="gps1.Longitude">
+    </div>
+
+    <div class="input-group">
+        <div class="input-group-prepend">
+            <span class="input-group-text">Gps2</span>
+        </div>
+        <input type="text" class="form-control" @bind-value="gps2.LatitudeSymbol">
+        <input type="number" step="0.01" class="form-control" @bind-value="gps2.Latitude">
+        <input type="text" class="form-control" @bind-value="gps2.LongitudeSymbol">
+        <input type="number" step="0.01" class="form-control" @bind-value="gps2.Longitude">
+    </div>
+</form>
+} else {
+    <button type="button" class="btn btn-warning" @onclick="(() => showAddForm = true)">Add</button>
+}
+
+<hr/>
+
+<div class="input-group mb-3">
+    <div class="input-group-prepend">
+        <button class="btn btn-outline-secondary" type="button" id="button-addon1" @onclick="Find">Find</button>
+    </div>
+    <input type="number" class="form-control" placeholder="" aria-label="Example text with button addon" aria-describedby="button-addon1" @bind-value="id">
+</div>
+
+@if (property != null) {
+    <form>
+        <div class="form-group">
+            <label for="exampleFormControlInput1">Register Number</label>
+            <input type="number" class="form-control" id="exampleFormControlInput1" @bind-value="property.RegisterNumber">
+        </div>
+
+        <div class="form-group">
+            <label for="exampleFormControlInput1">Description</label>
+            <input type="text" class="form-control" id="exampleFormControlInput1" @bind-value="property.Description">
+        </div>
+
+        <div class="input-group">
+            <div class="input-group-prepend">
+                <span class="input-group-text">Gps1</span>
+            </div>
+            <input type="text" class="form-control" @bind-value="property.Gps1.LatitudeSymbol">
+            <input type="number" step="0.01" class="form-control" @bind-value="property.Gps1.Latitude">
+            <input type="text" class="form-control" @bind-value="property.Gps1.LongitudeSymbol">
+            <input type="number" step="0.01" class="form-control" @bind-value="property.Gps1.Longitude">
+        </div>
+
+        <div class="input-group">
+            <div class="input-group-prepend">
+                <span class="input-group-text">Gps2</span>
+            </div>
+            <input type="text" class="form-control" @bind-value="property.Gps2.LatitudeSymbol">
+            <input type="number" step="0.01" class="form-control" @bind-value="property.Gps2.Latitude">
+            <input type="text" class="form-control" @bind-value="property.Gps2.LongitudeSymbol">
+            <input type="number" step="0.01" class="form-control" @bind-value="property.Gps2.Longitude">
+        </div>
+
+        <div class="btn-group m-3" role="group" aria-label="Structure operations">
+            <button type="button" class="btn btn-primary" @onclick="Save">Save</button>
+            <button type="button" class="btn btn-danger" @onclick="Delete">Remove</button>
+        </div>
+    </form>
+}
+
+@code {
+    private int id;
+    private Property property;
+    private bool showAddForm = false;
+    private int registerNumber;
+    private string description;
+    private Gps gps1 = new Gps();
+    private Gps gps2 = new Gps();
+
+    private async Task HandleAdd()
+    {
+        showAddForm = false;
+        var prop = new Property { RegisterNumber = registerNumber, Description = description, Gps1 = gps1, Gps2 = gps2 };
+        await Http.PostAsJsonAsync<Property>("property", prop);
+    }
+
+    private async Task Find()
+    {
+        try {
+            property = await Http.GetFromJsonAsync<Property>($"property/{id}");
+            StateHasChanged();
+        } catch (Exception) {
+            Console.WriteLine("Ivalid id.");
+        }
+    }
+
+    private async Task Save()
+    {
+        await Http.PutAsJsonAsync<Property>("save", property);
+    }
+
+    private async Task Delete()
+    {
+        await Http.DeleteAsync($"delete/{id}");
+        property = null;
+        StateHasChanged();
+    }
+}

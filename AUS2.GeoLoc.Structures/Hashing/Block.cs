@@ -33,6 +33,17 @@ namespace AUS2.GeoLoc.Structures.Hashing
             return true;
         }
 
+        public bool UpdateRecord(T record)
+        {
+            for (int i = 0; i < ValidCount; i++) {
+                if (_Records[i].CustomEquals(record)) {
+                    _Records[i] = record;
+                    return true;
+                }
+            }
+            return false;
+        }
+
         public T DeleteRecord(T record)
         {
             var recordToDelete = -1;
