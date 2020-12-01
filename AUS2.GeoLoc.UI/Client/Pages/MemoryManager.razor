@@ -1,0 +1,52 @@
+﻿@page "/memory"
+@inject HttpClient Http
+
+<h2 class="m-3">MemoryManager</h2>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Main File</th>
+            <th>Overflow File</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>
+                <ul>
+                    @foreach (var item in freeMainAddresses) {
+                        <li>@item</li>
+                    }
+                </ul>
+            </td>
+            <td>
+                <ul>
+                    @foreach (var item in freeOverflowAddresses) {
+                        <li>@item</li>
+                    }
+                </ul>
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+@code {
+    private List<int> freeMainAddresses = new List<int>();
+    private List<int> freeOverflowAddresses = new List<int>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try {
+            freeMainAddresses = await Http.GetFromJsonAsync<List<int>>("freeSpaceMain");
+        } catch (Exception) {
+
+            freeMainAddresses.Clear();
+        }
+
+        try {
+            freeOverflowAddresses = await Http.GetFromJsonAsync<List<int>>("freeSpaceOverflow");
+        } catch (Exception) {
+            freeOverflowAddresses.Clear();
+        }
+    }
+}

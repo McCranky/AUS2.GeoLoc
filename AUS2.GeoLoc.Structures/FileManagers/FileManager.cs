@@ -3,6 +3,7 @@ using AUS2.GeoLoc.Structures.Tables;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace AUS2.GeoLoc.Structures.FileManagers
@@ -52,11 +53,17 @@ namespace AUS2.GeoLoc.Structures.FileManagers
                 _fileStream.Seek(0, SeekOrigin.Begin);
                 _fileStream.SetLength(LastAddress - blocksToErase * _blockSize);
                 if (blocksToErase > 1) { // lebo ak je 1, tak sa tam ani nedostala
-                    _freeAddresses.RemoveRange(_freeAddresses.Count - blocksToErase - 1, blocksToErase - 1);
+                    --blocksToErase;
+                    _freeAddresses.RemoveRange(_freeAddresses.Count - blocksToErase, blocksToErase);
                 }
             } else {
                 _freeAddresses.Add(address, address);
             }
+        }
+
+        public List<int> ShowFreeAddresses()
+        {
+            return _freeAddresses.Items.Select(item => item.Key).ToList();
         }
 
         public void WriteBytes(int address, byte[] byts)

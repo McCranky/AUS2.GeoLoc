@@ -49,10 +49,10 @@ namespace AUS2.GeoLoc.Structures.Tables
             return found ? Items[index] : null;
         }
 
-        public void RemoveRange(int from, int to)
+        public void RemoveRange(int from, int count)
         {
-            if (from > to || from < 0 || from >= Count || to >= Count) return;
-            Items.RemoveRange(from, to - from);
+            //if (from > to || from < 0 || from >= Count || to >= Count) return;
+            Items.RemoveRange(from, count);
         }
 
         public void Clear()

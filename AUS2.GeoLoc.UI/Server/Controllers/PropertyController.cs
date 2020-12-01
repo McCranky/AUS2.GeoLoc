@@ -91,5 +91,17 @@ namespace AUS2.GeoLoc.UI.Server.Controllers
             }
             return BadRequest();
         }
+
+        [HttpGet("freeSpaceMain")]
+        public IActionResult GetFreeSpaceMain()
+        {
+            return Ok(_context.GetFreeAddressesMain());
+        }
+
+        [HttpGet("freeSpaceOverflow")]
+        public IActionResult GetFreeSpaceOverflow()
+        {
+            return Ok(_context.GetFreeAddressesOverflow());
+        }
     }
 }

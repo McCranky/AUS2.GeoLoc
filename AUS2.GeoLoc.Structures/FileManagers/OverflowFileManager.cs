@@ -3,6 +3,7 @@ using AUS2.GeoLoc.Structures.Tables;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace AUS2.GeoLoc.Structures.FileManagers
@@ -135,8 +136,16 @@ namespace AUS2.GeoLoc.Structures.FileManagers
                         }
                         _blocksInfoTable.Remove(address);
                         FreeAddress(address);
+                    } else {
+                        if (!TryShake(blockInfo.OverflowAddress, address, ref helpBlock, out var newOverflowAddress)) {
+                            WriteBytes(address, helpBlock.ToByteArray());
+                        } else {
+                            // TODO uvolnenie adresy a prepojenie blokov
+                            if (newOverflowAddress >= 0) {
+                                blockInfo.OverflowAddress = newOverflowAddress;
+                            }
+                        }
                     }
-                    WriteBytes(address, helpBlock.ToByteArray());
                     canContinue = false;
                 }
             }
@@ -181,10 +190,71 @@ namespace AUS2.GeoLoc.Structures.FileManagers
                 _blocksInfoTable.Remove(maxAddress);
                 FreeAddress(maxAddress);
             } else {
-                WriteBytes(maxAddress, helpBlock.ToByteArray());
+                if (!TryShake(blockInfo.OverflowAddress, maxAddress, ref helpBlock, out var newOverflowAddress)) {
+                    WriteBytes(maxAddress, helpBlock.ToByteArray());
+                } else {
+                    // TODO uvolnenie adresy a prepojenie blokov
+                    if (newOverflowAddress >= 0) {
+                        blockInfo.OverflowAddress = newOverflowAddress;
+                    }
+                }
             }
 
             block.AddRecord(record);
+        }
+
+        private bool TryShake(int firstAddressOfSequence, int blockToShakeAddress, ref Block<T> blockToShake, out int newOverflowAddress)
+        {
+            newOverflowAddress = -1;
+            var address = firstAddressOfSequence;
+            var shakeToAddress = -1;
+            OverflowBlockInfo info;
+
+            while (address != int.MinValue) {
+                info = _blocksInfoTable[address].Value;
+
+                if (address != blockToShakeAddress &&
+                    info.Records + blockToShake.ValidCount <= blockToShake.BFactor) 
+                {
+                    shakeToAddress = address;
+                    break;
+                }
+
+                address = info.NextOwerflowAddress;
+            }
+
+            if (shakeToAddress != -1) {
+                var shakeBlock = new Block<T>(blockToShake.BFactor, blockToShake.Records[0].GetEmptyClass());
+                var shakeBlockInfo = _blocksInfoTable[shakeToAddress].Value;
+                ReadBlock(shakeToAddress, ref shakeBlock);
+
+                foreach (var record in blockToShake.Records) {
+                    shakeBlock.AddRecord(record);
+                }
+                shakeBlockInfo.Records = shakeBlock.ValidCount;
+
+                WriteBytes(shakeToAddress, shakeBlock.ToByteArray());
+
+                if (shakeBlockInfo.NextOwerflowAddress == blockToShakeAddress) {
+                    // ak blok z ktoreho sa striasalo je nasledovnikom bloku do ktoreho sa striasa, tak mu priradime jeho nasledovnika
+                    shakeBlockInfo.NextOwerflowAddress = _blocksInfoTable[blockToShakeAddress].Value.NextOwerflowAddress;
+                } else if (blockToShakeAddress == firstAddressOfSequence) { 
+                    // ak sa ztriasal prvy blok zo sekvencie tak povodnemu bloku musime priradiť jeho nasledovnika
+                    newOverflowAddress = _blocksInfoTable[blockToShakeAddress].Value.NextOwerflowAddress;
+                } else {
+                    // inak prepojime zreťazenie
+                    // musime najsť blok, ktory ukazuje na utriasany a nasatviť mu spravneho nasledovnika
+                    var blockBeforeToShakeBlockInfo = _blocksInfoTable.Items.First(tableItem => tableItem.Value.NextOwerflowAddress == blockToShakeAddress);
+                    blockBeforeToShakeBlockInfo.Value.NextOwerflowAddress = _blocksInfoTable[blockToShakeAddress].Value.NextOwerflowAddress;
+                }
+
+                _blocksInfoTable.Remove(blockToShakeAddress);
+                FreeAddress(blockToShakeAddress);
+
+                return true;
+            } else {
+                return false;
+            }
         }
 
         public override int GetSize()

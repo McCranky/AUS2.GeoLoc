@@ -110,6 +110,16 @@ namespace AUS2.GeoLoc.UI.Server.Data
             }
 
             return result;
-        } 
+        }
+
+        public List<int> GetFreeAddressesMain()
+        {
+            return _context.GetFreeAddressesMain();
+        }
+
+        public List<int> GetFreeAddressesOverflow()
+        {
+            return _context.GetFreeAddressesOverflow();
+        }
     }
 }

@@ -196,6 +196,16 @@ namespace AUS2.GeoLoc.Structures.Hashing
             return chainData;
         }
 
+        public List<int> GetFreeAddressesMain()
+        {
+            return _fileManager.ShowFreeAddresses();
+        }
+
+        public List<int> GetFreeAddressesOverflow()
+        {
+            return _overflowManager.ShowFreeAddresses();
+        }
+
         public T Find(T data)
         {
             var block = GetBlock(data, out var blockInfo, out _);
