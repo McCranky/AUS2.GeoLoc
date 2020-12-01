@@ -75,10 +75,10 @@ namespace AUS2.GeoLoc.UI.Server.Controllers
         }
 
         [HttpPut("save")]
-        public IActionResult Update([FromBody] Property property)
+        public IActionResult Update([FromBody] PropertyChangeModel changeModel)
         {
-            if (_context.UpdateProperty(property)) {
-                return Ok(property);
+            if (_context.UpdateProperty(changeModel)) {
+                return Ok(changeModel.Property);
             }
             return BadRequest();
         }

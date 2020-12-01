@@ -53,6 +53,11 @@
 @if (property != null) {
     <form>
         <div class="form-group">
+            <label for="exampleFormControlInput1">Id</label>
+            <input type="number" class="form-control" id="exampleFormControlInput1" @bind-value="property.Id">
+        </div>
+
+        <div class="form-group">
             <label for="exampleFormControlInput1">Register Number</label>
             <input type="number" class="form-control" id="exampleFormControlInput1" @bind-value="property.RegisterNumber">
         </div>
@@ -112,12 +117,19 @@
             StateHasChanged();
         } catch (Exception) {
             Console.WriteLine("Ivalid id.");
+            property = null;
+            StateHasChanged();
         }
     }
 
     private async Task Save()
     {
-        await Http.PutAsJsonAsync<Property>("save", property);
+        var changedProperty = new PropertyChangeModel {
+            OriginalId = id,
+            Property = property
+        };
+
+        await Http.PutAsJsonAsync<PropertyChangeModel>("save", changedProperty);
     }
 
     private async Task Delete()

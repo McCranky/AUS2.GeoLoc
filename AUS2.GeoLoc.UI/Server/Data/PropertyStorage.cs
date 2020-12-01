@@ -41,9 +41,15 @@ namespace AUS2.GeoLoc.UI.Server.Data
             return _context.Find(new Property { Id = id });
         }
 
-        public bool UpdateProperty(Property property)
+        public bool UpdateProperty(PropertyChangeModel changeModel)
         {
-            return _context.Update(property);
+            if (changeModel.HasIdChanged) {
+                _context.Delete(new Property { Id = changeModel.OriginalId });
+                _context.Add(changeModel.Property);
+                return true;
+            }
+
+            return _context.Update(changeModel.Property);
         }
 
         public bool DeleteProperty(int id)
