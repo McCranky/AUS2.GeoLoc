@@ -1,10 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
 namespace AUS2.GeoLoc.Structures.Hashing
 {
+    /// <summary>
+    /// Represents info about block stored in main hashing file
+    /// </summary>
     public class BlockInfo : IRecord
     {
         public int Address { get; set; }

@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Text;
 
 namespace AUS2.GeoLoc.Structures.Utilities
 {
+    /// <summary>
+    /// Utility class for bits operations
+    /// </summary>
     public static class BitsOperations
     {
         public static BitArray GetFirstBits(BitArray from, int count)
@@ -25,8 +25,9 @@ namespace AUS2.GeoLoc.Structures.Utilities
 
         public static int GetIntFromBitArray(BitArray bitArray)
         {
-            if (bitArray.Length > 32)
+            if (bitArray.Length > 32) {
                 throw new ArgumentException("Argument length shall be at most 32 bits.");
+            }
 
             int[] array = new int[1];
             bitArray.CopyTo(array, 0);

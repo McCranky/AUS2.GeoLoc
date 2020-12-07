@@ -2,10 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 
 namespace AUS2.GeoLoc.Structures.Hashing
 {
+    /// <summary>
+    /// A container that stores records. Optimal size is size of cluster on disk on which is stored on.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
     public class Block<T> : IRecord where T : IData<T>
     {
         public int BFactor { get; private set; }
@@ -25,6 +28,16 @@ namespace AUS2.GeoLoc.Structures.Hashing
         }
 
         public List<T> Records => _Records.Take(ValidCount).ToList();
+
+        public T FindRecord(T record)
+        {
+            foreach (var rc in Records) {
+                if (rc.CustomEquals(record)) {
+                    return rc;
+                }
+            }
+            return default;
+        }
 
         public bool AddRecord(T record)
         {

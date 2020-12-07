@@ -1,10 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
 namespace AUS2.GeoLoc.Structures.Hashing
 {
+    /// <summary>
+    /// Represents informations about overflow blocks
+    /// </summary>
     public class OverflowBlockInfo : IRecord
     {
         public int Records { get; set; } = 1;

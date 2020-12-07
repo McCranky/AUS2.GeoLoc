@@ -8,13 +8,18 @@
     <button type="submit" class="btn btn-info">Confirm</button>
 
     <div class="form-group">
-        <label for="exampleFormControlInput1">Register Number</label>
-        <input type="number" class="form-control" id="exampleFormControlInput1" @bind-value="registerNumber">
+        <label for="inputId">Id</label>
+        <input type="number" class="form-control" id="inputId" @bind-value="newId">
     </div>
 
     <div class="form-group">
-        <label for="exampleFormControlInput1">Description</label>
-        <input type="text" class="form-control" id="exampleFormControlInput1" @bind-value="description">
+        <label for="inputNumber">Register Number</label>
+        <input type="number" class="form-control" id="inputNumber" @bind-value="registerNumber">
+    </div>
+
+    <div class="form-group">
+        <label for="inputDescription">Description</label>
+        <input type="text" class="form-control" id="inputDescription" @bind-value="description">
     </div>
 
     <div class="input-group">
@@ -98,15 +103,16 @@
     private int id;
     private Property property;
     private bool showAddForm = false;
+    private int newId = int.MinValue;
     private int registerNumber;
-    private string description;
+    private string description = "";
     private Gps gps1 = new Gps();
     private Gps gps2 = new Gps();
 
     private async Task HandleAdd()
     {
         showAddForm = false;
-        var prop = new Property { RegisterNumber = registerNumber, Description = description, Gps1 = gps1, Gps2 = gps2 };
+        var prop = new Property { Id = newId, RegisterNumber = registerNumber, Description = description, Gps1 = gps1, Gps2 = gps2 };
         await Http.PostAsJsonAsync<Property>("property", prop);
     }
 

@@ -1,24 +1,31 @@
 ﻿using AUS2.GeoLoc.Structures.Hashing;
 using AUS2.GeoLoc.Structures.Tables;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 
 namespace AUS2.GeoLoc.Structures.FileManagers
 {
+    /// <summary>
+    /// Takes care about all overflow operations and manages file operations on overflow file
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
     public class OverflowFileManager<T> : FileManager, IRecord where T : IData<T>
     {
         private SortedTable<int, OverflowBlockInfo> _blocksInfoTable;
+        private T _emptyClass;
+        private int _bFactor;
 
-        public OverflowFileManager(string filePath, int blockSize) : base(filePath, blockSize)
+        public OverflowFileManager(string filePath, int blockSize, T emptyClass, int bFactor, bool resetFile = true) : base(filePath, blockSize, resetFile)
         {
             _blocksInfoTable = new SortedTable<int, OverflowBlockInfo>();
+            _emptyClass = emptyClass;
+            _bFactor = bFactor;
         }
 
-        public void GetBlockAndInfo(int address, ref Block<T> block, out OverflowBlockInfo blockInfo)
+        public void GetBlockAndInfo(int address, out Block<T> block, out OverflowBlockInfo blockInfo)
         {
+            block = new Block<T>(_bFactor, _emptyClass);
             ReadBlock(address, ref block);
             blockInfo = _blocksInfoTable[address].Value;
         }
@@ -28,39 +35,93 @@ namespace AUS2.GeoLoc.Structures.FileManagers
             return _blocksInfoTable[address].Value;
         }
 
-        public void Add(ref T data, ref Block<T> block, ref BlockInfo blockInfo)
+        internal bool TryFindPlace(T data, ref Block<T> block, int blockAddress, out int placeAddress)
         {
+            var address = blockAddress;
+            var freeBlock = new Block<T>(_bFactor, _emptyClass);
+            var freeAddress = int.MaxValue;
+
+            while (address != int.MinValue) {
+                ReadBlock(address, ref block);
+                var info = _blocksInfoTable[address].Value;
+
+                if (block.FindRecord(data) != null) {
+                    placeAddress = -1;
+                    return false;
+                }
+
+                if (info.Records < block.BFactor && address < freeAddress) {
+                    freeAddress = address;
+                    //freeBlock = block;
+                    freeBlock.FromByteArray(block.ToByteArray()); // TODO tu bude možno habaďura
+                }
+
+                if (info.NextOwerflowAddress == int.MinValue && freeAddress == int.MaxValue) {
+                    freeAddress = address;
+                    break;
+                }
+                address = info.NextOwerflowAddress;
+            }
+
+            block = freeBlock;
+            placeAddress = freeAddress;
+            return true;
+        }
+
+        public bool Add(ref T data, ref BlockInfo blockInfo)
+        {
+            var block = new Block<T>(_bFactor, _emptyClass);
+
             if (blockInfo.OverflowAddress != int.MinValue) {
-                AddToExistingBlock(ref data, ref block, ref blockInfo);
+                return AddToExistingBlock(ref data, ref block, ref blockInfo);
             } else {
                 AddNewBlock(ref data, ref block, ref blockInfo);
+                return true;
             }
         }
 
-        private void AddToExistingBlock(ref T data, ref Block<T> block, ref BlockInfo blockInfo)
+        private bool AddToExistingBlock(ref T data, ref Block<T> block, ref BlockInfo blockInfo)
         {
-            var foundPlace = false;
-            var nextAddress = blockInfo.OverflowAddress;
-            while (!foundPlace) {
-                var info = _blocksInfoTable[nextAddress].Value;
-                if (info.Records < block.BFactor) {
-                    // zapis ho sem
-                    ReadBlock(nextAddress, ref block);
-                    block.AddRecord(data);
-                    ++info.Records;
-                    WriteBytes(nextAddress, block.ToByteArray());
-                    foundPlace = true;
-                } else {
-                    if (info.NextOwerflowAddress != int.MinValue) {
-                        nextAddress = info.NextOwerflowAddress;
-                    } else {
-                        AddNewOverflowBlock(ref data, ref block, ref info);
-                        foundPlace = true;
-                    }
-                }
-            }
-        }
+            if (!TryFindPlace(data, ref block, blockInfo.OverflowAddress, out var address)) return false;
 
+            var info = _blocksInfoTable[address].Value;
+            if (info.Records < block.BFactor) {
+                block.AddRecord(data);
+                ++info.Records;
+                WriteBytes(address, block.ToByteArray());
+            } else {
+                AddNewOverflowBlock(ref data, ref block, ref info);
+            }
+
+            return true;
+            //var foundPlace = false;
+            //var nextAddress = blockInfo.OverflowAddress;
+            //while (!foundPlace) {
+            //    var info = _blocksInfoTable[nextAddress].Value;
+            //    if (info.Records < block.BFactor) {
+            //        // zapis ho sem
+            //        ReadBlock(nextAddress, ref block);
+            //        block.AddRecord(data);
+            //        ++info.Records;
+            //        WriteBytes(nextAddress, block.ToByteArray());
+            //        foundPlace = true;
+            //    } else {
+            //        if (info.NextOwerflowAddress != int.MinValue) {
+            //            nextAddress = info.NextOwerflowAddress;
+            //        } else {
+            //            AddNewOverflowBlock(ref data, ref block, ref info);
+            //            foundPlace = true;
+            //        }
+            //    }
+            //}
+            //return true;
+        }
+        /// <summary>
+        /// Adds a new block at he end of the existing sequence of overflow blocks
+        /// </summary>
+        /// <param name="data"></param>
+        /// <param name="block"></param>
+        /// <param name="blockInfo"></param>
         private void AddNewOverflowBlock(ref T data, ref Block<T> block, ref OverflowBlockInfo blockInfo)
         {
             var address = GetFreeAddress();
@@ -71,7 +132,12 @@ namespace AUS2.GeoLoc.Structures.FileManagers
 
             _blocksInfoTable.Add(address, new OverflowBlockInfo());
         }
-
+        /// <summary>
+        /// Starts a new sequence of overflow blocks
+        /// </summary>
+        /// <param name="data"></param>
+        /// <param name="block"></param>
+        /// <param name="blockInfo"></param>
         private void AddNewBlock(ref T data, ref Block<T> block, ref BlockInfo blockInfo)
         {
             var address = GetFreeAddress();
@@ -83,8 +149,10 @@ namespace AUS2.GeoLoc.Structures.FileManagers
             _blocksInfoTable.Add(address, new OverflowBlockInfo());
         }
 
-        public bool Update(int overflowAddress, ref Block<T> block, ref T data)
+        public bool Update(ref T data, int overflowAddress)
         {
+            var block = new Block<T>(_bFactor, _emptyClass);
+
             while (overflowAddress != int.MinValue) {
                 ReadBlock(overflowAddress, ref block);
                 if (block.UpdateRecord(data)) {
@@ -104,18 +172,19 @@ namespace AUS2.GeoLoc.Structures.FileManagers
             block.FromByteArray(blockBytes);
         }
 
-        internal void Remove(ref T data, ref Block<T> block, ref BlockInfo blockInfo, ref Block<T> helpBlock)
+        internal void Remove(ref T data, ref BlockInfo blockInfo)
         {
+            var block = new Block<T>(_bFactor, _emptyClass);
             // aktualizovat blockInfo ak sa vyprazdnil blok na ktory ukazuje
             var address = blockInfo.OverflowAddress;
             OverflowBlockInfo beforeInfo = null;
 
             var canContinue = true;
             while (canContinue) {
-                ReadBlock(address, ref helpBlock);
+                ReadBlock(address, ref block);
                 var info = _blocksInfoTable[address].Value;
 
-                if (helpBlock.DeleteRecord(data) == null) {
+                if (block.DeleteRecord(data) == null) {
                     if (info.NextOwerflowAddress != int.MinValue) {
                         beforeInfo = info;
                         address = info.NextOwerflowAddress;
@@ -137,10 +206,9 @@ namespace AUS2.GeoLoc.Structures.FileManagers
                         _blocksInfoTable.Remove(address);
                         FreeAddress(address);
                     } else {
-                        if (!TryShake(blockInfo.OverflowAddress, address, ref helpBlock, out var newOverflowAddress)) {
-                            WriteBytes(address, helpBlock.ToByteArray());
+                        if (!TryShake(blockInfo.OverflowAddress, address, ref block, out var newOverflowAddress)) {
+                            WriteBytes(address, block.ToByteArray());
                         } else {
-                            // TODO uvolnenie adresy a prepojenie blokov
                             if (newOverflowAddress >= 0) {
                                 blockInfo.OverflowAddress = newOverflowAddress;
                             }
@@ -151,8 +219,9 @@ namespace AUS2.GeoLoc.Structures.FileManagers
             }
         }
 
-        internal void MoveRecordToBlock(ref Block<T> block, ref BlockInfo blockInfo, ref Block<T> helpBlock)
+        internal void MoveRecordToBlock(ref Block<T> block, ref BlockInfo blockInfo)
         {
+            var helpBlock = new Block<T>(_bFactor, _emptyClass);
             // najdeme najväčšiu adresu a z nej zobereme, aby sme uvolnovali miesto z konca
             var address = blockInfo.OverflowAddress;
             var beforeAddress = -1;
@@ -193,7 +262,6 @@ namespace AUS2.GeoLoc.Structures.FileManagers
                 if (!TryShake(blockInfo.OverflowAddress, maxAddress, ref helpBlock, out var newOverflowAddress)) {
                     WriteBytes(maxAddress, helpBlock.ToByteArray());
                 } else {
-                    // TODO uvolnenie adresy a prepojenie blokov
                     if (newOverflowAddress >= 0) {
                         blockInfo.OverflowAddress = newOverflowAddress;
                     }
@@ -203,6 +271,14 @@ namespace AUS2.GeoLoc.Structures.FileManagers
             block.AddRecord(record);
         }
 
+        /// <summary>
+        /// Checks if block can me combined with other block
+        /// </summary>
+        /// <param name="firstAddressOfSequence"></param>
+        /// <param name="blockToShakeAddress"></param>
+        /// <param name="blockToShake"></param>
+        /// <param name="newOverflowAddress"></param>
+        /// <returns></returns>
         private bool TryShake(int firstAddressOfSequence, int blockToShakeAddress, ref Block<T> blockToShake, out int newOverflowAddress)
         {
             newOverflowAddress = -1;
@@ -224,7 +300,7 @@ namespace AUS2.GeoLoc.Structures.FileManagers
             }
 
             if (shakeToAddress != -1) {
-                var shakeBlock = new Block<T>(blockToShake.BFactor, blockToShake.Records[0].GetEmptyClass());
+                var shakeBlock = new Block<T>(_bFactor, _emptyClass);
                 var shakeBlockInfo = _blocksInfoTable[shakeToAddress].Value;
                 ReadBlock(shakeToAddress, ref shakeBlock);
 

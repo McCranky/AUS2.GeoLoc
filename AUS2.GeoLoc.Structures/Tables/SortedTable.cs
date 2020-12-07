@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace AUS2.GeoLoc.Structures.Tables
 {
@@ -23,6 +22,11 @@ namespace AUS2.GeoLoc.Structures.Tables
         public int Count => Items.Count;
         public List<TKey> DescendingKeys => Items.Select(item => item.Key).OrderByDescending(key => key).ToList();
 
+        /// <summary>
+        /// Insert value with a key in correct order
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
         public void Add(TKey key, TValue value)
         {
             var index = IndexOfKey(key, 0, Items.Count, out var found);
@@ -51,7 +55,6 @@ namespace AUS2.GeoLoc.Structures.Tables
 
         public void RemoveRange(int from, int count)
         {
-            //if (from > to || from < 0 || from >= Count || to >= Count) return;
             Items.RemoveRange(from, count);
         }
 

@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace AUS2.GeoLoc.Structures.Tables
 {
@@ -14,10 +12,5 @@ namespace AUS2.GeoLoc.Structures.Tables
             Key = key;
             Value = value;
         }
-
-        //public static implicit operator TableItem<TKey, TValue>(TableItem<TKey, TValue> tableItem)
-        //{
-        //    return new TableItem<TKey, TValue>(tableItem.Key, tableItem.Value);
-        //}
     }
 }

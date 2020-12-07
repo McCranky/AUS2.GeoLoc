@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using AUS2.GeoLoc.Structures.Hashing;
 using AUS2.GeoLoc.UI.Shared;
 
@@ -14,7 +11,7 @@ namespace AUS2.GeoLoc.UI.Server.Data
         private int _count = 0;
         public PropertyStorage()
         {
-            _context = new ExtendibleHashingDirectory<Property>("properties.dat", 3);
+            _context = new ExtendibleHashingDirectory<Property>("properties.dat", 3, 6);
         }
 
         public bool CanSeed => true;//_count == 0;
@@ -63,8 +60,8 @@ namespace AUS2.GeoLoc.UI.Server.Data
 
         public void AddProperty(ref Property property)
         {
-            property.Id = _idSequence++;
-            //property = new Property { Id = _idSequence++, Description = property.Description, RegisterNumber = property.RegisterNumber };
+            if (property.Id == int.MinValue)
+                property.Id = _idSequence++;
             if (_context.Add(property)) {
                 ++_count;
             }

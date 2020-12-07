@@ -4,10 +4,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 
 namespace AUS2.GeoLoc.Structures.FileManagers
 {
+    /// <summary>
+    /// Class that cares about free space in file and also read/writes to a file
+    /// </summary>
     public class FileManager : IDisposable, IRecord
     {
         private FileStream _fileStream;
@@ -16,9 +18,14 @@ namespace AUS2.GeoLoc.Structures.FileManagers
 
         private int LastAddress => (int)_fileStream?.Length;
 
-        public FileManager(string filePath, int blockSize)
+        public FileManager(string filePath, int blockSize, bool resetFile = true)
         {
             _fileStream = new FileStream(filePath, FileMode.OpenOrCreate);
+            if (resetFile) {
+                _fileStream.Seek(0, SeekOrigin.Begin);
+                _fileStream.SetLength(0);
+            }
+
             _freeAddresses = new SortedTable<int, int>();
             _blockSize = blockSize;
         }
